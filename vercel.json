@@ -7,7 +7,7 @@
   "api/youtube/*.js": {
     "maxDuration": 25
   }
-}
+
   },
   "headers": [
     {
