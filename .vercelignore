@@ -1,0 +1,2 @@
+# Keep the Hugging Face Space source in GitHub, but exclude it from Vercel deployment.
+hf-space/
