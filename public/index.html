@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faceless Video Maker</title>
+  <meta name="description" content="Turn a topic into a downloadable YouTube video. Free, AI script, voiceover, stock visuals, subtitles — right in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/css/themes.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🎬</span>
+      <span class="brand-name" data-i18n="appName">Faceless Video Maker</span>
+    </div>
+    <div class="header-actions">
+      <select id="langSwitch" class="lang-switch" aria-label="Interface language">
+        <option value="en">English</option>
+        <option value="bn">বাংলা</option>
+      </select>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- STEP 1: Topic form -->
+    <section id="step-topic" class="step" data-step="topic">
+      <h1 data-i18n="topicHeading">What's your video about?</h1>
+      <p class="subtle" data-i18n="topicSubheading">Enter a topic. We'll write a script, find visuals, and build a downloadable video — free.</p>
+
+      <form id="topicForm" class="topic-form">
+        <label for="topicInput" data-i18n="topicLabel">Topic</label>
+        <textarea
+          id="topicInput"
+          name="topic"
+          maxlength="200"
+          rows="3"
+          placeholder="e.g. 5 fun facts about space"
+          required
+        ></textarea>
+        <div class="char-count"><span id="topicCharCount">0</span>/200</div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="languageSelect" data-i18n="languageLabel">Narration language</label>
+            <select id="languageSelect" name="language">
+              <option value="en">English</option>
+              <option value="bn">বাংলা (Bengali)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="sceneCountInput" data-i18n="sceneCountLabel">Number of scenes</label>
+            <input id="sceneCountInput" name="sceneCount" type="number" min="3" max="15" value="6" />
+          </div>
+          <div class="form-field">
+            <label for="formatSelect" data-i18n="formatLabel">Format</label>
+            <select id="formatSelect" name="format">
+              <option value="9:16">Shorts (9:16)</option>
+              <option value="16:9">Landscape (16:9)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="generateBtn" class="primary-btn">
+          <span data-i18n="generateBtn">Generate script</span>
+        </button>
+      </form>
+
+      <div id="topicError" class="error-banner" hidden role="alert"></div>
+    </section>
+
+    <!-- Loading state -->
+    <section id="step-loading" class="step" data-step="loading" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="loadingMessage" data-i18n="loadingScript">Writing your script…</p>
+    </section>
+
+    <!-- STEP 2: Scene editor -->
+    <section id="step-editor" class="step" data-step="editor" hidden>
+      <div class="editor-header">
+        <div>
+          <h1 id="projectTitle">Video title</h1>
+          <p class="subtle" data-i18n="editorSubheading">Edit the script and swap clips before rendering.</p>
+          <p id="draftStatus" class="subtle draft-status" role="status"></p>
+        </div>
+        <div class="editor-actions">
+          <button id="backToTopicBtn" class="secondary-btn" type="button" data-i18n="startOverBtn">Start over</button>
+          <button id="voiceAllBtn" class="secondary-btn" type="button" data-i18n="generateAllVoicesBtn">Generate all voices</button>
+          <button id="previewBtn" class="primary-btn" type="button" data-i18n="previewVideoBtn">▶ Preview video</button>
+          <button id="continueBtn" class="primary-btn" type="button" data-i18n="continueBtn">Render &amp; download</button>
+        </div>
+      </div>
+
+      <section id="voicePanel" class="voice-panel">
+        <label for="voiceModeSelect" data-i18n="voiceModeLabel">Voice</label>
+        <select id="voiceModeSelect">
+          <option value="tts" data-i18n="voiceModeTts">AI voice</option>
+          <option value="clone" data-i18n="voiceModeClone">My cloned voice</option>
+          <option value="record" data-i18n="voiceModeRecord">Record myself</option>
+        </select>
+
+        <div id="cloneBox" class="clone-box" hidden>
+          <p class="subtle" data-i18n="cloneHelp">Record a short sample of your voice. It is used only to generate this video and is never saved.</p>
+          <p class="clone-prompt" data-i18n="clonePrompt">Read aloud: "Hi, this is my voice. I'm recording a short sample so my videos can sound like me, clearly and naturally."</p>
+          <label class="consent">
+            <input type="checkbox" id="cloneConsent" />
+            <span data-i18n="cloneConsent">This is my own voice, or I have permission to clone it.</span>
+          </label>
+          <div class="clone-actions">
+            <button type="button" id="sampleRecordBtn" class="secondary-btn" disabled>Record sample</button>
+            <span id="sampleStatus" class="subtle" role="status"></span>
+          </div>
+          <audio id="samplePlayer" controls hidden></audio>
+        </div>
+        <p id="voiceNote" class="subtle" hidden></p>
+      </section>
+
+      <div id="sceneList" class="scene-list" aria-live="polite"></div>
+
+      <template id="sceneCardTemplate">
+        <article class="scene-card" data-scene-id="">
+          <header class="scene-card-header">
+            <span class="scene-number"></span>
+            <div class="scene-card-actions">
+              <button type="button" class="icon-btn move-up-btn" aria-label="Move scene up" title="Move up">↑</button>
+              <button type="button" class="icon-btn move-down-btn" aria-label="Move scene down" title="Move down">↓</button>
+              <button type="button" class="icon-btn danger delete-scene-btn" aria-label="Delete scene" title="Delete scene">✕</button>
+            </div>
+          </header>
+
+          <label class="scene-field-label" data-i18n="narrationLabel">Narration</label>
+          <textarea class="scene-text" maxlength="500" rows="2"></textarea>
+
+          <div class="scene-voice">
+            <button type="button" class="secondary-btn voice-btn">Generate voice</button>
+            <button type="button" class="secondary-btn play-scene-btn">▶ Preview scene</button>
+            <span class="voice-status subtle" role="status"></span>
+          </div>
+
+          <div class="scene-media">
+            <div class="scene-media-preview">
+              <div class="media-placeholder" data-i18n="noMediaYet">No clip selected</div>
+            </div>
+            <div class="scene-media-controls">
+              <label class="scene-field-label" data-i18n="visualKeywordLabel">Visual search keyword</label>
+              <div class="keyword-row">
+                <input type="text" class="scene-keyword" maxlength="80" />
+                <button type="button" class="secondary-btn find-media-btn" data-i18n="findClipsBtn">Find clips</button>
+              </div>
+              <div class="media-results" hidden></div>
+            </div>
+          </div>
+        </article>
+      </template>
+
+      <button id="addSceneBtn" type="button" class="secondary-btn add-scene-btn" data-i18n="addSceneBtn">+ Add scene</button>
+    </section>
+  </main>
+
+  <dialog id="previewDialog" class="preview-dialog" aria-labelledby="previewSceneLabel">
+    <div class="preview-head">
+      <span id="previewSceneLabel" class="preview-label"></span>
+      <button id="previewCloseBtn" class="icon-btn" type="button" aria-label="Close preview">✕</button>
+    </div>
+    <div id="previewStage" class="preview-stage portrait">
+      <div id="previewMedia" class="preview-media"></div>
+      <div id="previewSubtitle" class="preview-subtitle"></div>
+    </div>
+    <div class="preview-progress" aria-hidden="true"><div id="previewProgressBar"></div></div>
+    <div class="preview-controls">
+      <button id="previewPrevBtn" class="icon-btn" type="button" aria-label="Previous scene">⏮</button>
+      <button id="previewPlayBtn" class="primary-btn" type="button">▶</button>
+      <button id="previewNextBtn" class="icon-btn" type="button" aria-label="Next scene">⏭</button>
+    </div>
+    <p id="previewNote" class="subtle preview-note" hidden></p>
+  </dialog>
+
+
+  <dialog id="renderDialog" class="render-dialog" aria-labelledby="renderTitle">
+    <div class="preview-head">
+      <h2 id="renderTitle" class="render-title" data-i18n="renderTitle">Render video</h2>
+      <button id="renderCloseBtn" class="icon-btn" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div id="renderSetup">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="renderQuality" data-i18n="renderQualityLabel">Quality</label>
+          <select id="renderQuality">
+            <option value="720p">720p (faster)</option>
+            <option value="1080p" selected>1080p</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="renderContainer" data-i18n="renderContainerLabel">File type</label>
+          <select id="renderContainer">
+            <option value="webm" selected>WebM</option>
+            <option value="mp4">MP4 (if your browser supports it)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="renderSubStyle" data-i18n="renderSubStyleLabel">Subtitle style</label>
+          <select id="renderSubStyle">
+            <option value="classic" data-i18n="subStyleClassic">Classic</option>
+            <option value="bold" data-i18n="subStyleBold">Bold yellow</option>
+            <option value="box" data-i18n="subStyleBox">On a dark box</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="renderMusicBox" class="render-music">
+        <label for="renderMusicFile" data-i18n="renderMusicLabel">Background music (optional)</label>
+        <input id="renderMusicFile" type="file" accept="audio/*" />
+        <label class="consent" id="renderDuckRow">
+          <input type="checkbox" id="renderDuck" checked />
+          <span data-i18n="renderDuckLabel">Lower the music while the narrator speaks</span>
+        </label>
+        <p class="subtle" data-i18n="renderMusicHelp">Use music you have the right to use. The file stays in your browser.</p>
+      </div>
+
+      <p id="renderSummary" class="subtle" role="status"></p>
+      <div id="renderIssues" class="error-banner" hidden role="alert"></div>
+      <button id="renderStartBtn" class="primary-btn" type="button" data-i18n="renderStartBtn">Start rendering</button>
+    </div>
+
+    <div id="renderProgress" hidden>
+      <p id="renderStatus" class="subtle" role="status"></p>
+      <div class="render-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="renderBar"></div></div>
+      <p class="subtle" data-i18n="renderKeepOpen">Keep this tab open and visible. Rendering runs in real time.</p>
+      <button id="renderCancelBtn" class="secondary-btn" type="button" data-i18n="renderCancelBtn">Cancel</button>
+    </div>
+
+    <div id="renderResult" hidden>
+      <video id="renderVideo" class="render-video" controls playsinline></video>
+      <div id="renderWarnings" class="warning-banner" hidden></div>
+      <div class="render-actions">
+        <a id="renderDownload" class="primary-btn" download data-i18n="renderDownloadBtn">Download video</a>
+        <button id="renderAgainBtn" class="secondary-btn" type="button" data-i18n="renderAgainBtn">Render again</button>
+      </div>
+      <p class="subtle" data-i18n="renderAiNote">YouTube may ask you to mark realistic AI-generated voice or visuals as "altered or synthetic content" when you upload.</p>
+
+      <section id="metaPanel" class="meta-panel">
+        <h3 data-i18n="metaHeading">Title, description &amp; tags</h3>
+        <button id="metaGenerateBtn" class="secondary-btn" type="button" data-i18n="metaGenerateBtn">Suggest with AI</button>
+        <p id="metaStatus" class="subtle" role="status"></p>
+        <div id="metaFields" hidden>
+          <label for="metaTitle" data-i18n="metaTitleLabel">Title</label>
+          <div class="meta-row"><input id="metaTitle" type="text" maxlength="100" /><button type="button" class="secondary-btn meta-copy" data-target="metaTitle" data-i18n="copyBtn">Copy</button></div>
+          <label for="metaDescription" data-i18n="metaDescriptionLabel">Description</label>
+          <textarea id="metaDescription" rows="8"></textarea>
+          <button type="button" class="secondary-btn meta-copy" data-target="metaDescription" data-i18n="copyBtn">Copy</button>
+          <label for="metaTags" data-i18n="metaTagsLabel">Tags (comma separated)</label>
+          <div class="meta-row"><input id="metaTags" type="text" /><button type="button" class="secondary-btn meta-copy" data-target="metaTags" data-i18n="copyBtn">Copy</button></div>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
+  <footer class="app-footer">
+    <p data-i18n="pexelsAttribution">Video content and photos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></p>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
