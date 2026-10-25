@@ -1,4 +1,4 @@
 coqui-tts
 fastapi
-uvicorn[standard]
+uvicorn
 python-multipart
