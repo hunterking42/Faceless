@@ -1,15 +1,13 @@
 {
   "outputDirectory": "dist",
   "functions": {
-    "api/*.js": {
-      "maxDuration": 25
-    },
-    "api/clone.js": {
-      "maxDuration": 60
-    },
-    "api/youtube/*.js": {
-      "maxDuration": 25
-    }
+  "api/*.js": {
+    "maxDuration": 60
+  },
+  "api/youtube/*.js": {
+    "maxDuration": 25
+  }
+}
   },
   "headers": [
     {
